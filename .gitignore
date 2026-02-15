@@ -33,3 +33,6 @@ build/
 .vscode/
 
 project.txt
+
+/logs/
+/*.log
