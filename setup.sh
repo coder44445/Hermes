@@ -1,65 +1,32 @@
 #!/bin/bash
-# ─────────────────────────────────────────────────────────────
-#  Hermes — Notification Engine  |  Setup Script (Linux/macOS)
-# ─────────────────────────────────────────────────────────────
-
 set -e
 
-echo ""
-echo "⚡ Hermes — Notification Engine Setup"
-echo "────────────────────────────────────────"
+echo "⚡ Hermes — Setup"
 
-# Check Docker is installed
+# Make sure Docker is installed and the daemon is running before we do anything
 if ! command -v docker &> /dev/null; then
-  echo "❌ Docker is not installed. Please install Docker Desktop and try again."
-  echo "   https://www.docker.com/products/docker-desktop/"
+  echo "❌ Docker not found. Install: https://www.docker.com/products/docker-desktop/"
   exit 1
 fi
 
-# Check Docker daemon is running
 if ! docker info &> /dev/null; then
-  echo "❌ Docker daemon is not running. Please start Docker Desktop and try again."
+  echo "❌ Docker daemon not running. Start Docker Desktop."
   exit 1
 fi
 
-echo "✅ Docker found: $(docker --version)"
+# Tear down old containers first to avoid port conflicts
+docker compose down --remove-orphans 2>/dev/null || true
 
-# Check docker compose (v2 plugin or v1 standalone)
-if docker compose version &> /dev/null; then
-  COMPOSE="docker compose"
-elif command -v docker-compose &> /dev/null; then
-  COMPOSE="docker-compose"
-else
-  echo "❌ Docker Compose not found. Please install Docker Compose."
-  exit 1
-fi
+# Build images and start all services in the background
+docker compose up --build -d
 
-echo "✅ Docker Compose found"
-echo ""
-
-# Stop any existing containers for this project
-echo "🛑 Stopping any existing containers..."
-$COMPOSE down --remove-orphans 2>/dev/null || true
-
-# Build and start all services
-echo ""
-echo "🔨 Building and starting services (MySQL, Redis, Kafka, App)..."
-echo "   This may take a few minutes on first run."
-echo ""
-$COMPOSE up --build -d
-
-# Wait for app to be healthy
-echo ""
-echo "⏳ Waiting for the app to start..."
+# Poll until the app responds — Kafka + MySQL can take a moment to be ready
+echo "⏳ Waiting for app..."
 ATTEMPTS=0
-MAX_ATTEMPTS=30
-
-until curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/notify 2>/dev/null | grep -qE "^(4|2)"; do
+until curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/notify 2>/dev/null | grep -qE "^[24]"; do
   ATTEMPTS=$((ATTEMPTS + 1))
-  if [ "$ATTEMPTS" -ge "$MAX_ATTEMPTS" ]; then
-    echo ""
-    echo "⚠️  App did not start within expected time. Check logs with:"
-    echo "   $COMPOSE logs app"
+  if [ "$ATTEMPTS" -ge 30 ]; then
+    echo "⚠️  Timed out. Run: docker compose logs app"
     exit 1
   fi
   printf "."
@@ -67,17 +34,5 @@ until curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/notify 2>/dev
 done
 
 echo ""
-echo ""
-echo "────────────────────────────────────────"
-echo "✅ Hermes is running!"
-echo ""
-echo "   API:    http://localhost:8080/notify"
-echo ""
-echo "   Try it:"
-echo '   curl -X POST http://localhost:8080/notify \'
-echo '     -H "Content-Type: application/json" \'
-echo '     -d '"'"'{"tenantId":"tenant1","eventType":"ORDER_PLACED","referenceId":"order-001","payload":{"email":"user@example.com"}}'"'"
-echo ""
-echo "   Logs:   $COMPOSE logs -f app"
-echo "   Stop:   $COMPOSE down"
-echo "────────────────────────────────────────"
+echo "✅ Running at http://localhost:8080/notify"
+echo "Stop: docker compose down"
