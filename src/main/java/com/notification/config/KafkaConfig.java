@@ -1,7 +1,6 @@
 package com.notification.config;
 
 import com.notification.event.NotificationEvent;
-import lombok.RequiredArgsConstructor;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
@@ -20,11 +19,13 @@ import java.util.Map;
 
 @EnableKafka
 @Configuration
-@RequiredArgsConstructor
 public class KafkaConfig {
 
     @Value("${spring.kafka.bootstrap-servers}")
     private String bootstrapServers;
+
+    @Value("${spring.kafka.consumer.group-id:notification-group}")
+    private String groupId;
 
     @Bean
     public ProducerFactory<String, NotificationEvent> producerFactory() {
@@ -42,13 +43,13 @@ public class KafkaConfig {
 
     @Bean
     public ConsumerFactory<String, NotificationEvent> consumerFactory() {
-        JacksonJsonDeserializer<NotificationEvent> deserializer = new JacksonJsonDeserializer<>(
-                NotificationEvent.class);
+        JacksonJsonDeserializer<NotificationEvent> deserializer =
+                new JacksonJsonDeserializer<>(NotificationEvent.class);
         deserializer.addTrustedPackages("*");
 
         Map<String, Object> config = new HashMap<>();
         config.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
-        config.put(ConsumerConfig.GROUP_ID_CONFIG, "notification-group");
+        config.put(ConsumerConfig.GROUP_ID_CONFIG, groupId);
         config.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
 
         return new DefaultKafkaConsumerFactory<>(
@@ -59,11 +60,9 @@ public class KafkaConfig {
 
     @Bean
     public ConcurrentKafkaListenerContainerFactory<String, NotificationEvent> kafkaListenerContainerFactory() {
-
-        ConcurrentKafkaListenerContainerFactory<String, NotificationEvent> factory = new ConcurrentKafkaListenerContainerFactory<>();
-
+        ConcurrentKafkaListenerContainerFactory<String, NotificationEvent> factory =
+                new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(consumerFactory());
-
         return factory;
     }
 }

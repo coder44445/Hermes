@@ -3,6 +3,7 @@ package com.notification.controller;
 import com.notification.event.NotificationEvent;
 import com.notification.ratelimit.RateLimiterService;
 import com.notification.service.NotificationProducer;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -19,11 +20,9 @@ public class NotificationController {
     private final RateLimiterService rateLimiterService;
 
     @PostMapping
-    public ResponseEntity<String> notify(@RequestBody NotificationEvent event) {
-
+    public ResponseEntity<String> notify(@Valid @RequestBody NotificationEvent event) {
         String tenantId = event.getTenantId();
 
-        // Rate limiting
         if (!rateLimiterService.isAllowed(tenantId)) {
             log.warn("Rate limit exceeded for tenant {}", tenantId);
             return ResponseEntity
@@ -31,11 +30,11 @@ public class NotificationController {
                     .body("Rate limit exceeded for tenant: " + tenantId);
         }
 
-        // Publish to Kafka
         producer.publish(event);
         log.info("Notification event queued in Kafka. tenantId={}, eventType={}", tenantId, event.getEventType());
 
-        return ResponseEntity.status(HttpStatus.ACCEPTED)
-                .body("Notification queued in Kafka");
+        return ResponseEntity
+                .status(HttpStatus.ACCEPTED)
+                .body("Notification queued");
     }
 }

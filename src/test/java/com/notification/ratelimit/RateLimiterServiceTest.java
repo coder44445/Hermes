@@ -6,6 +6,8 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 class RateLimiterServiceTest {
@@ -27,8 +29,8 @@ class RateLimiterServiceTest {
 
     @Test
     void shouldAllowRequestsWithinLimit() {
-        when(valueOperations.increment(anyString(),anyLong()))
-                .thenReturn(1L, 2L, 3L);
+        // Use 1-arg increment() — matches what RateLimiterService actually calls
+        when(valueOperations.increment(anyString())).thenReturn(1L, 2L, 3L);
 
         assertThat(rateLimiterService.isAllowed("tenantA")).isTrue();
         assertThat(rateLimiterService.isAllowed("tenantA")).isTrue();
@@ -37,8 +39,7 @@ class RateLimiterServiceTest {
 
     @Test
     void shouldRejectWhenLimitExceeded() {
-        when(valueOperations.increment(anyString()))
-                .thenReturn(11L); // limit = 10
+        when(valueOperations.increment(anyString())).thenReturn(11L); // default limit = 10
 
         assertThat(rateLimiterService.isAllowed("tenantA")).isFalse();
     }
@@ -49,7 +50,15 @@ class RateLimiterServiceTest {
 
         rateLimiterService.isAllowed("tenantA");
 
-        verify(redisTemplate, times(1))
-                .expire(anyString(), any());
+        verify(redisTemplate, times(1)).expire(anyString(), any());
+    }
+
+    @Test
+    void shouldNotSetExpiryOnSubsequentRequests() {
+        when(valueOperations.increment(anyString())).thenReturn(2L); // not the first request
+
+        rateLimiterService.isAllowed("tenantA");
+
+        verify(redisTemplate, never()).expire(anyString(), any());
     }
 }
