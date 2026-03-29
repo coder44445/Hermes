@@ -17,7 +17,7 @@ public class NotificationConsumer {
     @KafkaListener(topics = "${notification.kafka.topic:notification-events}", groupId = "notification-group")
     public void consume(NotificationEvent event) {
         processor.processEvent(event, () -> {
-            sender.send(event); // your existing sender logic
+            sender.send(event);
             log.info("Processed notification from Kafka. tenantId={}, eventType={}", event.getTenantId(),
                     event.getEventType());
         });

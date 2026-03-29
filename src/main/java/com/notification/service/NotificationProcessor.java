@@ -63,9 +63,7 @@ public class NotificationProcessor {
         }
     }
 
-    // ─────────────────────────────────────────────────
     // Helpers
-    // ─────────────────────────────────────────────────
 
     private ProcessedEvent buildProcessedEvent(String key, String status, int retryCount, String errorMessage) {
         ProcessedEvent event = new ProcessedEvent();

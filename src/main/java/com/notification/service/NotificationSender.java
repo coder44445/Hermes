@@ -46,9 +46,7 @@ public class NotificationSender {
                 event.getTenantId(), event.getEventType());
     }
 
-    // ─────────────────────────────────────────────
     // Email channel
-    // ─────────────────────────────────────────────
     private void sendEmail(NotificationEvent event) {
         Map<String, Object> payload = event.getPayload();
         if (payload == null || !payload.containsKey("email")) {
@@ -65,9 +63,7 @@ public class NotificationSender {
         log.info("Sending email to {} | subject='{}' | body='{}'", email, subject, body);
     }
 
-    // ─────────────────────────────────────────────
     // Webhook channel
-    // ─────────────────────────────────────────────
     private void sendWebhook(NotificationEvent event) {
         Map<String, Object> payload = event.getPayload();
         if (payload == null || !payload.containsKey("webhookUrl")) {
@@ -85,10 +81,7 @@ public class NotificationSender {
         log.info("Webhook sent to {} | status={}", url, response.getStatusCode());
     }
 
-    // ─────────────────────────────────────────────
-    // In-app channel — log only (idempotency record
-    // is managed by NotificationProcessor, not here)
-    // ─────────────────────────────────────────────
+    // In-app channel — idempotency tracking is handled by NotificationProcessor, not here
     private void sendInApp(NotificationEvent event) {
         // TODO: Persist to a dedicated in_app_notifications table for front-end polling
         log.debug("In-app notification dispatched for tenant={}, eventType={}",
